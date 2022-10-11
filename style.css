@@ -1,0 +1,10 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #030303;
+}
+
+@font-face {
+    font-family: 'Showcard';
+    src: url(Showcard.ttf) format('truetype');
+}
