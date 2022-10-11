@@ -265,7 +265,7 @@ class Juego extends Phaser.Scene
 
     init (data)                              // parámetro `data` debe ser uno de los prefabs, por defecto es el nivel de los ángulos agudos
     {
-        this.nivel = Phaser.Utils.Objects.HasAny(data,'alien')? data : listaNiveles[0]; 
+        this.nivel = Phaser.Utils.Objects.HasAny(data,['alien'])? data : listaNiveles[0]; 
         this.respuesta = '0';
         this.angulos = Phaser.Utils.Array.Shuffle([...this.nivel.angulosBase]);
         
