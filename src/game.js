@@ -635,6 +635,9 @@ class Juego extends Phaser.Scene
         else if(!isNaN(parseInt(event.key)) && this.respuesta.length <= 2){
             this.respuesta = this.respuesta == 0? event.key : this.respuesta + event.key;
         }
+        else if(event.key == 'Enter'){
+            this.checkWon();
+        }
     }
     
     enableInputs ()
