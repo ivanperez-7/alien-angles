@@ -94,7 +94,7 @@ class Boot extends Phaser.Scene
             'tierra',          'venus'
         ].forEach(i => this.load.image(i, i+'.png'));
 
-        ['finger_snap', 'explain', 'win', 'complete'].forEach(i => this.load.audio(i, [`sounds/${i}.ogg`, `sounds/${i}.mp3`]));
+        ['finger_snap', 'explain', 'win', 'complete', 'whoosh', 'music'].forEach(i => this.load.audio(i, [`sounds/${i}.ogg`, `sounds/${i}.mp3`]));
 
         if (!localStorage.getItem('progreso') || !localStorage.getItem('lastLevel')){
             localStorage.setItem('progreso', '0');
@@ -109,6 +109,8 @@ class Boot extends Phaser.Scene
     }
 }
 
+var bgm = 0;
+
 // Menú principal
 class Menu extends Phaser.Scene 
 {
@@ -121,6 +123,10 @@ class Menu extends Phaser.Scene
     {
         this.input.setDefaultCursor('url(assets/blue.cur), pointer');
         this.add.image(w/2, h/2, lastLevel.fondo);
+        this.sound.pauseOnBlur = false;
+
+        if(!bgm)
+            bgm = this.sound.add('music').play({volume: 0.15, loop: true});
         
         var logo = this.add.image(w/2, 180, 'logo');
         this.alien = this.add.image(-60, 645, lastLevel.alien.nombre).setScale(0.55);
@@ -302,6 +308,7 @@ class Juego extends Phaser.Scene
         var finger_snap = this.sound.add('finger_snap');
 
         this.angleGraph = this.add.graphics({x: tierra.x, y: tierra.y});
+        this.delineado = this.add.graphics({x: tierra.x, y: tierra.y}).setMask(mask);
         this.side1 = this.add.graphics({x: tierra.x, y: tierra.y}).setMask(mask);
         this.side2 = this.add.graphics({x: tierra.x, y: tierra.y}).setMask(mask);
 
@@ -399,7 +406,7 @@ class Juego extends Phaser.Scene
             }
 
             this.tweens.add({
-                targets: [this.protact, this.side1, this.side2, this.angleGraph],
+                targets: [this.protact, this.side1, this.side2, this.delineado, this.angleGraph],
                 scale: 0,
                 ease: 'Lineal',
                 duration: 0.2e3,
@@ -408,6 +415,7 @@ class Juego extends Phaser.Scene
                     this.side1.clear().setScale(1);
                     this.side2.clear().setScale(1);
                     this.angleGraph.clear().setScale(1);
+                    this.delineado.clear().setScale(1);
                 }
             });
 
@@ -532,11 +540,9 @@ class Juego extends Phaser.Scene
     doPath (angulo)
     {
         this.data.values.estado = "waiting";
+        var whoosh = this.sound.add('whoosh', {volume: 0.8});
 
-        this.side1.lineStyle(10, this.nivel.alien.side1);
-        this.side2.lineStyle(10, this.nivel.alien.side2);
-
-        var t = this.tweens.timeline({
+        var p = [], p2 = [], t = this.tweens.timeline({
             targets: this.alien,
             ease: 'Sine.easeInOut',
             duration: 1.5e3,
@@ -544,14 +550,23 @@ class Juego extends Phaser.Scene
                 {
                     x: w/2,
                     delay: 0.2e3,
-                    onStart: () => this.side1.beginPath().moveTo(this.alien.x-w/2, this.alien.y-h/2+30),
-                    onUpdate: () => this.side1.lineTo(this.alien.x-w/2, this.alien.y-h/2+30).strokePath()
+                    onStart: () => whoosh.play(),
+                    onUpdate: () => {
+                        p.push(new Phaser.Geom.Point(this.alien.x-w/2, this.alien.y-h/2+30));
+                        this.side1.clear().lineStyle(10, this.nivel.alien.side1).strokePoints(p);
+                        this.delineado.clear().lineStyle(17, 0x000000, 1).strokePoints(p);
+                    },
+                    onComplete: () => this.alien.setFlipX(false)
                 },
                 {
                     x: w/2 + 212*Math.cos(Phaser.Math.DegToRad(angulo)),
                     y: h/2-30 - 212*Math.sin(Phaser.Math.DegToRad(angulo)),
-                    onStart: () => {this.alien.setFlipX(false); this.side2.beginPath().moveTo(this.alien.x-w/2, this.alien.y-h/2+30)},
-                    onUpdate: () => this.side2.lineTo(this.alien.x-w/2, this.alien.y-h/2+30).strokePath()
+                    onStart: () => whoosh.play(),
+                    onUpdate: () => {
+                        p2.push(new Phaser.Geom.Point(this.alien.x-w/2, this.alien.y-h/2+30));
+                        this.side2.clear().lineStyle(10, this.nivel.alien.side2).strokePoints(p2);
+                        this.delineado.clear().lineStyle(17, 0x000000, 1).strokePoints(p.concat(p2));
+                    }
                 }
             ]
         });
@@ -562,7 +577,7 @@ class Juego extends Phaser.Scene
             to: angulo,
             ease: 'Power2',
             delay: t.duration,
-            duration: 1.4e3,
+            duration: 1.3e3,
             onUpdate: tween => this.angleGraph.clear().lineStyle(4, 0x000000).fillStyle(this.nivel.alien.angle, 0.7).slice(0, 0, 100, Phaser.Math.DegToRad(0), Phaser.Math.DegToRad(-tween.getValue()), true).fillPath().strokePath(),
             onComplete: () => this.showHelp(this.helpDisplay)
         });
@@ -637,7 +652,7 @@ class Juego extends Phaser.Scene
             onComplete: () => this.scene.start(sc, data)
         });
         this.tweens.add({
-            targets: [this.protact, this.side1, this.side2, this.angleGraph],
+            targets: [this.protact, this.side1, this.side2, this.delineado, this.angleGraph],
             scale: 0,
             ease: 'Lineal',
             duration: 0.2e3,
@@ -754,6 +769,7 @@ class Repaso extends Phaser.Scene
         return this.add.container(x,y,[
             this.add.image(0, 0, Phaser.Utils.Array.GetRandom(['tierra', 'venus', 'mars', 'moon'])),
             this.add.graphics().lineStyle(4, 0x000000).fillStyle(alien.angle, 0.7).slice(0, 0, 100, Phaser.Math.DegToRad(0), Phaser.Math.DegToRad(-angulo), true).fillPath().strokePath(),
+            this.add.graphics().lineStyle(18, 0x000000).beginPath().moveTo(211,0).lineTo(0,0).lineTo(211*Math.cos(Phaser.Math.DegToRad(angulo)), 211*Math.sin(Phaser.Math.DegToRad(-angulo))).strokePath(),
             this.add.graphics().lineStyle(10, alien.side1).beginPath().moveTo(0,0).lineTo(211,0).strokePath(),
             this.add.graphics().lineStyle(10, alien.side2).beginPath().moveTo(0,0).lineTo(211*Math.cos(Phaser.Math.DegToRad(angulo)), 211*Math.sin(Phaser.Math.DegToRad(-angulo))).strokePath(),
             this.add.image(211*Math.cos(Phaser.Math.DegToRad(angulo)), 211*Math.sin(Phaser.Math.DegToRad(-angulo)), alien.nombre).setScale(0.4)
