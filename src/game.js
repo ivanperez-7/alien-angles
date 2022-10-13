@@ -94,7 +94,7 @@ class Boot extends Phaser.Scene
             'tierra',          'venus'
         ].forEach(i => this.load.image(i, i+'.png'));
 
-        ['finger_snap', 'explain', 'win', 'complete', 'whoosh', 'music'].forEach(i => this.load.audio(i, [`sounds/${i}.ogg`, `sounds/${i}.mp3`]));
+        ['finger_snap', 'explain', 'win', 'complete', 'whoosh', 'music3'].forEach(i => this.load.audio(i, [`sounds/${i}.ogg`, `sounds/${i}.mp3`]));
 
         if (!localStorage.getItem('progreso') || !localStorage.getItem('lastLevel')){
             localStorage.setItem('progreso', '0');
@@ -109,7 +109,7 @@ class Boot extends Phaser.Scene
     }
 }
 
-var bgm = 0;
+var bgm;
 
 // Menú principal
 class Menu extends Phaser.Scene 
@@ -125,8 +125,7 @@ class Menu extends Phaser.Scene
         this.add.image(w/2, h/2, lastLevel.fondo);
         this.sound.pauseOnBlur = false;
 
-        if(!bgm)
-            bgm = this.sound.add('music').play({volume: 0.15, loop: true});
+        if(!bgm) { bgm = this.sound.add('music3', {volume: 0.7, loop: true}).play() }
         
         var logo = this.add.image(w/2, 180, 'logo');
         this.alien = this.add.image(-60, 645, lastLevel.alien.nombre).setScale(0.55);
@@ -1092,7 +1091,6 @@ const config = {
         width: w,
         height: h
     },
-    audio: {disableWebAudio: true},
     physics: {default: 'arcade'},
     scene: [Boot, Menu, Instrucciones, Juego, Niveles, Repaso]
 };
