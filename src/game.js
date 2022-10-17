@@ -7,21 +7,21 @@
  *****************************************/
 
 // Resolución del juego
-const w = 960;
-const h = 720;
+const w = 960, h = 720;
 
 // clase de un nivel del juego
-const Nivel = (titulo, fondo, planeta, alien, angulosBase, introduccion) => Object({
+const Nivel = (titulo, fondo, planeta, alien, angulosBase, introduccion, ayuda) => ({
     titulo: titulo,
     fondo: fondo,
     planeta: planeta,
     alien: alien,
     angulosBase: angulosBase,
-    introduccion: introduccion
+    introduccion: introduccion,
+    ayuda: ayuda
 });
 
 // clase de un alien
-const Alien = (nombre, particles, side1, side2, angle) => Object({
+const Alien = (nombre, particles, side1, side2, angle) => ({
     nombre: nombre,
     particles: particles,
     side1: side1,
@@ -29,28 +29,31 @@ const Alien = (nombre, particles, side1, side2, angle) => Object({
     angle: angle
 });
 
-const alien1 = Alien('alien1', 'blue', 0xAA00AA, 0x00AA00, 0x84D9FF);
-const alien2 = Alien('alien2', 'green', 0xAA00AA, 0x00AA00, 0xFF8B3D);
-const alien3 = Alien('alien3', 'red', 0xAA00AA, 0x00AA00, 0xFFD580);
-const alien4 = Alien('alien4', 'blue', 0xAA00AA, 0x00AA00, 0xD8B9FF);
+const alien1 = Alien('alien1', 'blue', 0xAA00AA, 0x00AA00, 0x84D9FF),
+      alien2 = Alien('alien2', 'green', 0xAA00AA, 0x00AA00, 0xFF8B3D),
+      alien3 = Alien('alien3', 'red', 0xAA00AA, 0x00AA00, 0xFFD580),
+      alien4 = Alien('alien4', 'blue', 0xAA00AA, 0x00AA00, 0xD8B9FF);
 
 const listaNiveles = [
     Nivel ('agudos', 'sky', 'tierra', alien1, Phaser.Utils.Array.NumberArray(15/5, 80/5), [
         '¡Este alien está de visita por el planeta! Hará muchos recorridos a distintos lugares, ¡y necesita de tu ayuda!',
         'Debes medir el ángulo formado por el recorrido del alien, ¡presta atención!'
-    ]),
+    ], "Recuerda que los ángulos agudos miden menos de 90°, ¡tú puedes!"),
+
     Nivel ('obtusos', 'space', 'venus', alien2, Phaser.Utils.Array.NumberArray(95/5, 175/5), [
         'Ahora que estás familiarizado con los ángulos agudos, ¡es hora de trabajar con los obtusos!',
         'El alien ahora hará recorridos más amplios por el planeta, ¡presta atención!'
-    ]),
+    ], "Recuerda que los ángulos obtusos miden más de 90° pero menos de 180°, ¡tú puedes!"),
+
     Nivel ('cóncavos', 'space2', 'mars', alien3, Phaser.Utils.Array.NumberArray(185/5, 345/5), [
         '¡Wow! Hasta ahora has ayudado demasiado a nuestros dos amigos aliens, ¡muchas gracias!',
         'Conoce ahora a nuestro tercer amigo, quien realizará recorridos mucho más amplios que los demás.'
-    ]),
+    ], "Recuerda que los ángulos cóncavos miden más de 180° pero menos de 360°, ¡tú puedes!"),
+
     Nivel ('por doquier', 'night', 'moon', alien4, Phaser.Utils.Array.NumberArray(15/5, 345/5), [
         '¡Impresionante! Tienes un don para medir ángulos. Has sido de mucha ayuda para nuestros amigos aliens.',
         '¡Nuestro cuarto y último amigo hará recorridos por el planeta entero! ¿Crees poder ayudarlo?'
-    ])
+    ], "Debes recordar cada uno de los tres tipos importantes de ángulos para esta misión.")
 ];
 
 const frases = [
@@ -63,8 +66,7 @@ const frases = [
     '¡Pan comido!'
 ];
 
-var progreso;
-var lastLevel;
+var progreso, lastLevel, bgm;
 
 // Pantalla para cargar recursos y mostrar progreso de carga
 class Boot extends Phaser.Scene
@@ -78,25 +80,14 @@ class Boot extends Phaser.Scene
     {
         this.load.setPath('assets/');
 
-        [   'HUD',             'HUD2',            'agudosPreview',
-            'alien1',          'alien2',          'alien3',
-            'alien4',          'arrowWhite',      'blue',
-            'btAgudo',         'btAyuda',         'btCasa',
-            'btConcavo',       'btJugar',         'btJugar2',
-            'btListo',         'btNiveles',       'btObtuso',
-            'btRepaso',        'btTransportador', 'candado',
-            'completoPreview', 'concavosPreview', 'cross',
-            'green',           'hideButton',      'logo',
-            'mars',            'moon',            'night',
-            'obtusosPreview',  'protact',         'red',
-            'sky',             'space',           'space2',
-            'star',            'textBox',         'tick',
-            'tierra',          'venus'
-        ].forEach(i => this.load.image(i, i+'.png'));
+        ['agudosPreview', 'alien1', 'alien2', 'alien3', 'alien4', 'arrowWhite', 'blue', 'btAgudo', 'btAyuda', 'btCasa', 'btConcavo',
+        'btJugar', 'btJugar2', 'btListo', 'btNiveles', 'btObtuso', 'btRepaso', 'btTransportador', 'candado', 'completoPreview', 'concavosPreview',
+        'cross', 'green', 'hideButton', 'HUD', 'HUD2', 'logo', 'mars', 'moon', 'night', 'obtusosPreview', 'protact', 'red', 'sky', 'space',
+        'space2', 'star', 'textBox', 'tick', 'tierra', 'venus'].forEach(i => this.load.image(i));
 
         ['finger_snap', 'explain', 'win', 'complete', 'whoosh', 'music3'].forEach(i => this.load.audio(i, [`sounds/${i}.ogg`, `sounds/${i}.mp3`]));
 
-        if (!localStorage.getItem('progreso') || !localStorage.getItem('lastLevel')){
+        if (!localStorage.getItem('progreso') || !localStorage.getItem('lastLevel')) {
             localStorage.setItem('progreso', '0');
             localStorage.setItem('lastLevel', '0');
         }
@@ -108,8 +99,6 @@ class Boot extends Phaser.Scene
         this.load.on('complete', () => this.scene.start('menu'));
     }
 }
-
-var bgm;
 
 // Menú principal
 class Menu extends Phaser.Scene 
@@ -182,7 +171,7 @@ class Menu extends Phaser.Scene
 
         this.tweens.add({
             targets: this.alien,
-            x: -60,
+            x: -70,
             ease: 'Power2',
             duration: 0.7e3
         });
@@ -204,7 +193,7 @@ class Instrucciones extends Phaser.Scene
         var titulo = this.add.text(w/2, 65, "Instrucciones", {fontFamily: 'Showcard', fontSize: 38, stroke: '#40bad2', strokeThickness: 3}).setOrigin(0.5,0.5).setScale(0);
 
         var instr = this.add.text(-470, h/2-35, 
-        "¡Bienvenido a Alien Angles! Nuestros amigos aliens están de visita por la galaxia y realizarán muchos recorridos en distintos planetas.\n\nNecesitan de tu ayuda para medir los ángulos de sus recorridos. ¿te crees capaz? ¡Vamos a averiguarlo!", 
+        '¡Bienvenido a Alien Angles! Nuestros amigos aliens están de visita por la galaxia y realizarán muchos recorridos en distintos planetas.\n\nNecesitan de tu ayuda para medir los ángulos de sus recorridos. ¿te crees capaz? ¡Vamos a averiguarlo!', 
         {fontFamily: 'Showcard', fontSize: 26, align: 'center', stroke: '#000000', strokeThickness: 3}).setOrigin(0.5,0.5).setScale(0).setWordWrapWidth(w-100,false).setLineSpacing(25);
 
         this.tweens.add({
@@ -220,17 +209,14 @@ class Instrucciones extends Phaser.Scene
             duration: 0.9e3
         });
 
-        var aliens = [];
-        for (var a = 0; a < 4; a++){
-            var al = this.add.image(270+140*a, 900, ['alien1','alien2','alien3','alien4'][a]).setScale(0.5);
-            aliens.push(al);
-            this.tweens.add({
-                targets: al,
-                y: 660,
-                ease: 'Sine.easeOut',
-                delay:700+100*a
-            });
-        }
+        var aliens = [...['alien1','alien2','alien3','alien4'].entries()].map(a => this.add.image(270+140*a[0], 900, a[1]).setScale(0.5));
+        this.tweens.add({
+            targets: aliens,
+            y: 660,
+            ease: 'Sine.easeOut',
+            delay: (e, t, a, targetIndex, s, i) => targetIndex*100 + 700
+        });
+
         this.tweens.add({
             targets: instr,
             x: w/2,
@@ -288,8 +274,8 @@ class Juego extends Phaser.Scene
         this.data.set({estado: "inicio", nivActual: 1});
         
         this.helpDisplay = [      // instrucciones, no cambian
-            '¡El alien ha terminado su recorrido por la tierra! ¿Crees poder medir el ángulo formado?',
-            'Utiliza el transportador para ayudarte a medir el ángulo, y escribe tu respuesta con el teclado.'
+            'El alien ha terminado su recorrido por el planeta. ¡Ayúdalo a medir el ángulo formado!',
+            'Utiliza el transportador para medir el ángulo, y escribe tu respuesta con el teclado.'
         ];
 
         localStorage.setItem('lastLevel', listaNiveles.indexOf(this.nivel));
@@ -349,19 +335,19 @@ class Juego extends Phaser.Scene
 
         // Comienzan las animaciones y el resto del juego
         var i = 0.9e3;
+
         this.tweens.add({
             targets: [btCasa, btAyuda, btTransportador, btListo, HUDContainer],
             scale: {from: 0, to: 0.3},
             ease: 'Back',
             duration: i
         });
-
         this.tweens.add({
             targets: [tierra, titulo],
             scale: {from: 0, to: 1},
             ease: 'Back',
             duration: i,
-            onComplete: () => {
+            onComplete: () => { 
                 this.emitter = particles.createEmitter({
                     speed: 100,
                     scale: { start: 0.5, end: 0 },
@@ -369,23 +355,19 @@ class Juego extends Phaser.Scene
                 }).startFollow(this.alien)
             }
         });
-
         this.tweens.add({
             targets: this.alien,
             x: 726,
             ease: 'Power3',
             duration: 1e3,
-            delay: i
+            delay: i,
+            onComplete: () => this.showHelp(this.nivel.introduccion)
         });
-
-        i += 1e3;
-
-        this.time.delayedCall(i, this.showHelp, [this.nivel.introduccion], this);
     }
     
     checkWon ()
     {
-        if( this.respuesta !== '0' && Phaser.Math.Within(parseInt(this.respuesta), this.angulo, 5) ){        
+        if( this.respuesta !== '0' && Phaser.Math.Within(parseInt(this.respuesta), this.angulo, 5) ){
             if (this.data.values.nivActual == 5) {
                 this.data.values.estado = "levelCleared";
                 
@@ -401,7 +383,7 @@ class Juego extends Phaser.Scene
                 this.data.values.estado = "done";
                 this.sound.add('win').play();
 
-                this.showHelp([Phaser.Utils.Array.GetRandom(frases)+"\nHas adivinado el ángulo formado por el alien.", 'Te has ganado una  estrella :) ¡Sigue así para ganar más!'], 'Back', h/2, 0, 0);
+                this.showHelp([Phaser.Utils.Array.GetRandom(frases)+"\nHas logrado medir el ángulo formado por el alien.", 'Te has ganado una estrella :) ¡Sigue así para ganar más!'], 'Back', h/2, 0, 0);
             }
 
             this.tweens.add({
@@ -442,10 +424,8 @@ class Juego extends Phaser.Scene
         }
         else {
             this.sound.add('explain').play();
-            this.showHelp(['¡Ups! Parece que el ángulo es incorrecto, ¡pero sigue intentando!', 'Asegúrate de usar el transportador para encontrar la respuesta.'], 'Back', h/2, 0, 0);
+            this.showHelp(['¡Ups! Parece que el ángulo es incorrecto, ¡pero sigue intentando!', this.nivel.ayuda, 'Asegúrate de usar el transportador para encontrar la respuesta.'], 'Back', h/2, 0, 0);
         }
-        
-        this.respuesta = '0';
     }
 
     // Muestra un cuadro de texto con varias cadenas de texto (parámetro instrucciones).
@@ -461,6 +441,8 @@ class Juego extends Phaser.Scene
         var hideButton = this.add.image(265, -110, 'hideButton')
         .setScale(0.09)
         .on('pointerdown', () => {                  // dependiendo del estado del juego, se hacen distintas cosas al cerrar el cuadro de texto
+            this.sound.add('finger_snap').play();
+
             switch (this.data.values.estado) {
                 case "inicio":
                     this.angulo = this.angulos[this.data.values.nivActual-1] * 5;
@@ -491,16 +473,14 @@ class Juego extends Phaser.Scene
         .setVisible(false)
         .on('pointerdown', () => {
             if(idx == instrucciones.length-1) arrowRight.setVisible(true).setInteractive();
-            idx--;
-            display.setText(instrucciones[idx]);
+            display.setText(instrucciones[--idx]);
             if(idx == 0) arrowLeft.setVisible(false).disableInteractive();
         });
 
         var arrowRight = this.add.image(170, 69, 'arrowWhite')
         .on('pointerdown', () => {
             if(idx == 0) arrowLeft.setVisible(true).setInteractive();
-            idx++;
-            display.setText(instrucciones[idx]);
+            display.setText(instrucciones[++idx]);
             if(idx == instrucciones.length-1) arrowRight.setVisible(false).disableInteractive();
         });
 
@@ -522,13 +502,13 @@ class Juego extends Phaser.Scene
             duration: 0.5e3
         });
 
-        var instruccionesContainer = this.add.container(w/2, startY, [textBox, display, arrowLeft, arrowRight, hideButton]);
+        var instruccionesContainer = this.add.container(w/2, startY, [textBox, display, arrowLeft, arrowRight, hideButton]).setScale(_startScale);
 
         this.tweens.add({
             targets: instruccionesContainer,
             y: h/2,
             angle: _angle,
-            scale: {from: _startScale, to: 1},
+            scale: 1,
             ease: easing,
             duration: 1e3,
             onComplete: () => { arrowRight.setInteractive(), hideButton.setInteractive() }
@@ -541,7 +521,7 @@ class Juego extends Phaser.Scene
         this.data.values.estado = "waiting";
         var whoosh = this.sound.add('whoosh', {volume: 0.8});
 
-        var p = [], p2 = [], t = this.tweens.timeline({
+        var p, t = this.tweens.timeline({
             targets: this.alien,
             ease: 'Sine.easeInOut',
             duration: 1.5e3,
@@ -551,7 +531,7 @@ class Juego extends Phaser.Scene
                     delay: 0.2e3,
                     onStart: () => whoosh.play(),
                     onUpdate: () => {
-                        p.push(new Phaser.Geom.Point(this.alien.x-w/2, this.alien.y-h/2+30));
+                        p = [{x: 215, y: 0}, {x: this.alien.x-w/2, y: this.alien.y-h/2+30}];
                         this.side1.clear().lineStyle(10, this.nivel.alien.side1).strokePoints(p);
                         this.delineado.clear().lineStyle(17, 0x000000, 1).strokePoints(p);
                     },
@@ -562,9 +542,9 @@ class Juego extends Phaser.Scene
                     y: h/2-30 - 212*Math.sin(Phaser.Math.DegToRad(angulo)),
                     onStart: () => whoosh.play(),
                     onUpdate: () => {
-                        p2.push(new Phaser.Geom.Point(this.alien.x-w/2, this.alien.y-h/2+30));
-                        this.side2.clear().lineStyle(10, this.nivel.alien.side2).strokePoints(p2);
-                        this.delineado.clear().lineStyle(17, 0x000000, 1).strokePoints(p.concat(p2));
+                        p = [{x: 215, y: 0}, {x: 0, y: 0}, {x: this.alien.x-w/2, y: this.alien.y-h/2+30}];
+                        this.side2.clear().lineStyle(10, this.nivel.alien.side2).strokePoints([{x: 2, y: 0}, ...p.slice(1)]);
+                        this.delineado.clear().lineStyle(18, 0x000000, 1).strokePoints(p);
                     }
                 }
             ]
@@ -574,10 +554,10 @@ class Juego extends Phaser.Scene
         this.tweens.addCounter({
             from: 0,
             to: angulo,
-            ease: 'Power2',
+            ease: 'Cubic.easeOut',
             delay: t.duration,
-            duration: 1.3e3,
-            onUpdate: tween => this.angleGraph.clear().lineStyle(4, 0x000000).fillStyle(this.nivel.alien.angle, 0.7).slice(0, 0, 100, Phaser.Math.DegToRad(0), Phaser.Math.DegToRad(-tween.getValue()), true).fillPath().strokePath(),
+            duration: 1.2e3,
+            onUpdate: tween => this.angleGraph.clear().lineStyle(4, 0x000000).fillStyle(this.nivel.alien.angle, 0.7).slice(0, 0, 100, Phaser.Math.DegToRad(-tween.getValue()), 0).fillPath().strokePath(),
             onComplete: () => this.showHelp(this.helpDisplay)
         });
     }
@@ -590,16 +570,17 @@ class Juego extends Phaser.Scene
         this.data.values.nivActual += 1;
         this.data.values.estado = "inicio";
         this.nivDisplay.setText(`${this.data.values.nivActual}/5`);
+        this.respuesta = '0';
 
         this.tweens.add({
             targets: this.alien,
             x: 726,
             y: h/2-30,
             ease: 'Sine.easeInOut',
-            duration: 1.3e3
+            duration: 1.3e3,
+            onComplete: () => this.showHelp(['En busca de explorar más lugares, nuestro amigo realizará otro recorrido por el planeta.', 'Mide bien el siguiente ángulo y ganarás otra estrellita. ¡Presta atención!']),
+            completeDelay: 0.1e3
         });
-        
-        this.time.delayedCall(1.4e3, this.showHelp, [['En busca de explorar más lugares, nuestro amigo realizará otro recorrido por el planeta.', 'Mide bien el siguiente ángulo y ganarás otra estrellita. ¡Presta atención!']], this);
     }
 
     // para regresar al menú principal
@@ -655,7 +636,7 @@ class Juego extends Phaser.Scene
             scale: 0,
             ease: 'Lineal',
             duration: 0.2e3,
-            onComplete: this.protact.destroy()
+            onComplete: () => this.protact.destroy()
         });
     }
 
@@ -753,10 +734,10 @@ class Repaso extends Phaser.Scene
             targets: this.planetas,
             scale: {from: 0, to: 0.38},
             ease: 'Back',
-            duration: 0.9e3
+            duration: 0.9e3,
+            onComplete: () => this.showHelp(["¡Has demostrado ser un maestro de los ángulos! ¿Crees poder con el reto final?", "Debes unir cada planeta con el ángulo que representa, ¡pan comido para ti! Buena suerte :)"]),
+            completeDelay: 0.1e3
         });
-
-        this.time.delayedCall(1e3, this.showHelp, [["¡Has demostrado ser un maestro de los ángulos! ¿Crees poder con el reto final?", "Debes unir cada planeta con el ángulo que representa, ¡pan comido para ti! Buena suerte :)"]], this);
     }
     
     generarPlaneta (x,y)
@@ -777,22 +758,22 @@ class Repaso extends Phaser.Scene
 
     crearPlanetasLineas ()
     {
-        var planetas = [[180,240], [180,480], [780,240], [780,480]].map(pos => this.generarPlaneta(pos[0], pos[1]));
+        var planetas = [], lineas = [];
 
-        var lineas = [];
-        for (const p of planetas) {
-            lineas.push( this.add.graphics({x: p.x, y: p.y}).lineStyle(10, 0xAA00AA).setData('respuesta', p.getData('respuesta')) );
-
-            p.setScale(0)
+        for (const [idx, pos] of [[180,240], [180,480], [780,240], [780,480]].entries()) {
+            planetas.push(this.generarPlaneta(...pos)
+            .setScale(0)
             .setData('correcto', false)
             .on('pointerdown', () => {
                 if (!this.clicked) {
                     this.clicked = true;
-                    this.drag = lineas[planetas.indexOf(p)];
+                    this.drag = lineas[idx];
                     this.children.bringToTop(this.drag);
                 }
-            })
+            }));
+            lineas.push( this.add.graphics({x: pos[0], y: pos[1]}).lineStyle(10, 0xAA00AA).setData('respuesta', planetas[idx].getData('respuesta')) );
         }
+
         return [planetas, lineas];
     }
 
@@ -807,6 +788,8 @@ class Repaso extends Phaser.Scene
         var hideButton = this.add.image(265, -110, 'hideButton')
         .setScale(0.09)
         .on('pointerdown', () => {                  // dependiendo del estado del juego, se hacen distintas cosas al cerrar el cuadro de texto
+            this.sound.add('finger_snap').play();
+            
             switch (this.data.values.estado) {
                 case "waiting":
                     this.enableInputs();
@@ -1019,6 +1002,7 @@ class Niveles extends Phaser.Scene
     create ()
     {
         this.add.image(480, 360, lastLevel.fondo);
+        var txtConf = {fontFamily: 'Showcard', fontSize: 26, stroke: 0x000000, strokeThickness: 5};
 
         this.interactive = [
             this.add.image(58, 65,'btCasa').setData({escena: 'menu', nivel: {}}),
@@ -1030,10 +1014,10 @@ class Niveles extends Phaser.Scene
 
         this.animables = [
             this.add.text(w/2, 65, 'Niveles', {fontFamily: 'Showcard', fontSize: 38, stroke: '#40bad2', strokeThickness: 3}).setOrigin(0.5,0.5),
-            this.add.text(250, 352, 'Ángulos agudos', {fontFamily: 'Showcard', fontSize: 26, stroke: 0x000000, strokeThickness: 5}).setOrigin(0.5,0.5),
-            this.add.text(710, 352, 'Ángulos obtusos', {fontFamily: 'Showcard', fontSize: 26, stroke: 0x000000, strokeThickness: 5}).setOrigin(0.5,0.5),
-            this.add.text(250, 667, 'Ángulos cóncavos', {fontFamily: 'Showcard', fontSize: 26, stroke: 0x000000, strokeThickness: 5}).setOrigin(0.5,0.5),
-            this.add.text(710, 667, 'Ángulos por doquier', {fontFamily: 'Showcard', fontSize: 26, stroke: 0x000000, strokeThickness: 5}).setOrigin(0.5,0.5),
+            this.add.text(250, 352, 'Ángulos agudos', txtConf).setOrigin(0.5,0.5),
+            this.add.text(710, 352, 'Ángulos obtusos', txtConf).setOrigin(0.5,0.5),
+            this.add.text(250, 667, 'Ángulos cóncavos', txtConf).setOrigin(0.5,0.5),
+            this.add.text(710, 667, 'Ángulos por doquier', txtConf).setOrigin(0.5,0.5),
             ...this.interactive
         ];
 
@@ -1091,7 +1075,13 @@ const config = {
         width: w,
         height: h
     },
-    physics: {default: 'arcade'},
+    title: 'Alien angles!',
+    url: 'https://github.com/ivanperez-7/alien-angles',
+    version: '1.2',
+    banner: {
+        text: '#ffffff',
+        background: ['#fff200', '#38f0e8', '#00bff3', '#ec008c']
+    },
     scene: [Boot, Menu, Instrucciones, Juego, Niveles, Repaso]
 };
 
